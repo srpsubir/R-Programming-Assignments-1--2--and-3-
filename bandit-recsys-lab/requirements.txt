@@ -1,0 +1,8 @@
+# Tested on Python 3.11. obp 0.4.1 calls DataFrame.drop(col, 1), which pandas>=2 removed,
+# and pandas 1.5.x has no wheels for Python 3.13, so use Python 3.11 with these pins.
+obp==0.4.1
+pandas==1.5.3
+numpy<2
+scikit-learn<1.4
+scipy<1.13
+matplotlib
