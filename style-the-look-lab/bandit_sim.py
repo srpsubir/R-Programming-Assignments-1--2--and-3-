@@ -87,7 +87,57 @@ def part2(reps=500):
     print("  errors are relative to the true value")
 
 
+def part3(reps=300):
+    """DM vs DR when the true value is known, under three reward models.
+
+    good    : per-arm CTR, cross-fitted (2 folds), mild shrinkage
+    shrunk  : per-arm CTR shrunk hard toward the global CTR (prior of 300 pseudo-impressions)
+    nothing : constant = global CTR (a model that knows nothing about arms)
+    """
+    pi = np.exp(CTR / 0.003)
+    pi /= pi.sum()
+    true_value = float(pi @ CTR)
+    print(f"\nPart 3: DM vs DR, uniform logging, true value={true_value:.5f}. "
+          "Cells: relative bias / relative mean abs error")
+    models = {"good": 5.0, "shrunk": 300.0, "nothing": None}
+    header = f"  {'n':>7} {'IPW':>13}" + "".join(f" {'DM-' + m:>13} {'DR-' + m:>13}" for m in models)
+    print(header)
+    rng = np.random.default_rng(11)
+    for n in [2000, 10000, 50000]:
+        res = {k: [] for k in ["IPW"] + [f"{e}-{m}" for m in models for e in ("DM", "DR")]}
+        for _ in range(reps):
+            a = rng.integers(0, K, n)
+            r = (rng.random(n) < CTR[a]).astype(float)
+            w = pi[a] * K
+            res["IPW"].append(np.mean(w * r))
+            fold = rng.integers(0, 2, n)
+            for m, prior in models.items():
+                dm_i = np.empty(n)
+                resid = np.empty(n)
+                for f in (0, 1):
+                    tr, te = fold != f, fold == f
+                    g = r[tr].mean()
+                    if prior is None:
+                        q = np.full(K, g)
+                    else:
+                        cnt = np.bincount(a[tr], minlength=K)
+                        suc = np.bincount(a[tr], weights=r[tr], minlength=K)
+                        q = (suc + prior * g) / (cnt + prior)
+                    dm_i[te] = pi @ q
+                    resid[te] = r[te] - q[a[te]]
+                res[f"DM-{m}"].append(dm_i.mean())
+                res[f"DR-{m}"].append((dm_i + w * resid).mean())
+        def cell(v):
+            v = np.array(v) - true_value
+            return f"{v.mean() / true_value:+6.1%}/{np.abs(v).mean() / true_value:5.1%}"
+        row = f"  {n:7d} {cell(res['IPW']):>13}"
+        for m in models:
+            row += f" {cell(res['DM-' + m]):>13} {cell(res['DR-' + m]):>13}"
+        print(row)
+
+
 if __name__ == "__main__":
     part1()
     part1b()
     part2()
+    part3()
