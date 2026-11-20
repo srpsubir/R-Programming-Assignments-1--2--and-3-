@@ -10,6 +10,8 @@ pip install -r requirements.txt
 python obd_ope_baseline.py
 python obd_dr_dm.py
 python bandit_sim.py
+python contextual_online_sim.py            # ~75 s, writes results/contextual_regret.png
+python exercises/check_thompson.py         # your Thompson sampling exercise (starts at 0/7)
 ```
 
 Pins matter: `obp` 0.4.1 fails on pandas 2+ (`DataFrame.drop(col, 1)`), and pandas 1.5.x has no wheels for Python 3.13.
@@ -54,6 +56,32 @@ Synthetic 10-arm environment, CTRs 0.2%-2%, so true values are known.
 | 50,000 | +0.1% / 6.0% | 0.0% / 5.9% | +0.2% / 5.9% | -5.6% / 7.2% | +0.2% / 5.9% | -53.1% / 53.1% | +0.1% / 5.9% |
 
   DM with a no-information model stays about 52-53% too low at every n. DM with a heavily shrunk model is biased but the bias shrinks as n grows. DR stayed close to unbiased under all three reward models. In this setting DR's error was about the same as IPW's, so no variance reduction showed up. Simulation noise was not quantified.
+
+## 4. Online contextual bandits, multiple seeds (`contextual_online_sim.py`)
+
+obp's `run_bandit_simulation` is a **replay** of logged data (the policy learns only on rounds where it picks the logged action), not a live loop. This script runs every policy live against an obp synthetic environment (K=10 arms, 5-dim context, true click probabilities known), a fresh environment per seed.
+
+Cumulative regret, mean +/- sd over 8 seeds, 5,000 rounds (lower is better):
+
+| policy | @1,000 | @5,000 | regret/round, last 1,000 |
+|---|---|---|---|
+| always random | 173.3 +/- 10.5 | 871.0 +/- 55.3 | 0.1742 |
+| LinUCB | 105.1 +/- 30.9 | 375.8 +/- 95.4 | 0.0579 |
+| LinEpsGreedy | 107.8 +/- 17.8 | 414.5 +/- 72.1 | 0.0700 |
+| LinTS (scratch) | 121.2 +/- 16.6 | 431.1 +/- 75.3 | 0.0673 |
+| LinTS (obp) | 128.4 +/- 17.5 | 457.9 +/- 81.1 | 0.0718 |
+| EpsGreedy (no context) | 137.9 +/- 17.1 | 590.8 +/- 60.6 | 0.1093 |
+| BernoulliTS (no context) | 151.3 +/- 15.1 | 619.9 +/- 64.3 | 0.1091 |
+| LogisticTS | 137.2 +/- 28.1 | 684.4 +/- 134.4 | 0.1363 |
+
+- Our from-scratch LinearTS and obp's LinTS are within one sd of each other (same algorithm: per-arm posterior N(A^-1 b, A^-1)).
+- Differences among LinUCB, LinEpsGreedy and the two LinTS rows are mostly within one sd of each other; 8 seeds and one environment family cannot rank them.
+- LogisticTS (default settings, untuned) ended with regret closer to the context-free policies. Cause not investigated.
+- Curves are still roughly linear at 5,000 rounds; policies were not run to convergence. Rewards are logistic in the context while LinTS/LinUCB fit linear models.
+
+## 5. Thompson sampling exercise (`exercises/`)
+
+Fill in `exercises/thompson_exercise.py` (Beta-Bernoulli TS, then linear contextual TS), then run `python exercises/check_thompson.py`. 7 checks, including that the posterior mean equals the ridge regression solution. The checks pass on the reference solution (`exercises/solutions/`, `--solution` flag) and were verified to fail on four deliberately broken variants (swapped Beta update, missing prior, no posterior sampling, greedy selection).
 
 ## Not done yet
 
