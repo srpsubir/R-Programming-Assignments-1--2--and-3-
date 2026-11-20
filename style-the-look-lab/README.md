@@ -12,6 +12,7 @@ python obd_dr_dm.py
 python bandit_sim.py
 python contextual_online_sim.py            # ~75 s, writes results/contextual_regret.png
 python exercises/check_thompson.py         # your Thompson sampling exercise (starts at 0/7)
+python lessons/lesson01_two_ads.py         # lessons 1-2: two ads, regret, Thompson sampling (~5 s)
 ```
 
 Pins matter: `obp` 0.4.1 fails on pandas 2+ (`DataFrame.drop(col, 1)`), and pandas 1.5.x has no wheels for Python 3.13.
